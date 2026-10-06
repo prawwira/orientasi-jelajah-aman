@@ -1,11 +1,59 @@
-// app/(tabs)/riwayat.tsx (ganti <View> terluar menjadi <SafeAreaView>)
+// src/app/(tabs)/riwayat.tsx
+import { useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
+import { Alert, Button, Platform, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import RiwayatList from "../../components/RiwayatList";
+import { KotaFavorit } from "../../../types/favorit";
+import { ambilSemuaFavorit, hapusFavorit } from "../../services/favoritStorage";
+
 export default function TabRiwayat() {
-const daftarKota = ["Pekalongan", "Jakarta", "Semarang"];
-return (
-<SafeAreaView style={{ flex: 1, padding: 16 }}>
-<RiwayatList daftarKota={daftarKota} />
-</SafeAreaView>
-);
+  const [daftarFavorit, setDaftarFavorit] = useState<KotaFavorit[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      ambilSemuaFavorit().then(setDaftarFavorit);
+    }, []),
+  );
+
+  async function hapus(id: number) {
+    await hapusFavorit(id);
+    setDaftarFavorit((prev) => prev.filter((k) => k.id !== id));
+  }
+
+  function konfirmasiHapus(kota: KotaFavorit) {
+    if (Platform.OS === "web") {
+      // Alert.alert tidak berfungsi di web, pakai window.confirm sebagai gantinya
+      const yakin = window.confirm(`Yakin hapus ${kota.nama}?`);
+      if (yakin) hapus(kota.id);
+      return;
+    }
+
+    Alert.alert("Konfirmasi Hapus", `Yakin hapus ${kota.nama}?`, [
+      { text: "Batal", style: "cancel" },
+      { text: "Hapus", style: "destructive", onPress: () => hapus(kota.id) },
+    ]);
+  }
+
+  return (
+    <SafeAreaView style={{ flex: 1, padding: 16, gap: 12 }}>
+      <Text style={{ fontSize: 18, fontWeight: "bold" }}>Kota Favorit</Text>
+      <Text>Tersimpan {daftarFavorit.length} kota</Text>
+
+      {daftarFavorit.length === 0 && <Text>Belum ada kota favorit</Text>}
+
+      {daftarFavorit.map((kota) => (
+        <View
+          key={kota.id}
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <Text>{kota.nama}</Text>
+          <Button title="Hapus" onPress={() => konfirmasiHapus(kota)} />
+        </View>
+      ))}
+    </SafeAreaView>
+  );
 }

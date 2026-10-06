@@ -1,5 +1,6 @@
 // src/app/(tabs)/index.tsx
-import { useEffect, useRef, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Button,
@@ -16,7 +17,12 @@ import WeatherCard from "../../components/WeatherCard";
 import { labelKodeCuaca } from "../../constants/weatherCodes";
 import { useDebounce } from "../../hooks/use-debounce";
 import { ambilKualitasUdara } from "../../services/airQualityService";
+import { ambilSemuaFavorit } from "../../services/favoritStorage";
 import { cariKota } from "../../services/geocodingService";
+import {
+  ambilKoordinatSaatIni,
+  mintaIzinLokasi,
+} from "../../services/locationService";
 import { konversiTingkatAQI } from "../../services/weatherAdapter";
 import { ambilCuaca } from "../../services/weatherService";
 
@@ -32,6 +38,18 @@ export default function HalamanUtama() {
   const [pesanError, setPesanError] = useState<string | null>(null);
   const teksTertunda = useDebounce(teksCari, 500);
   const requestIdRef = useRef(0); // pencegah race condition
+  const [pesanLokasi, setPesanLokasi] = useState<string | null>(null);
+
+  // Latihan mandiri poin 3: daftar id favorit untuk cek duplikat
+  const [idFavorit, setIdFavorit] = useState<number[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      ambilSemuaFavorit().then((daftar) =>
+        setIdFavorit(daftar.map((k) => k.id)),
+      );
+    }, []),
+  );
 
   useEffect(() => {
     if (teksTertunda.trim().length === 0) {
@@ -70,6 +88,37 @@ export default function HalamanUtama() {
     }
   }
 
+  async function gunakanLokasiSaatIni() {
+    const status = await mintaIzinLokasi();
+
+    if (status === "denied") {
+      setPesanLokasi(
+        "Izin lokasi ditolak. Silakan cari kota secara manual di atas.",
+      );
+      return;
+    }
+    if (status === "unavailable") {
+      setPesanLokasi(
+        "Layanan lokasi tidak aktif di perangkat ini. Silakan cari kota secara manual.",
+      );
+      return;
+    }
+
+    setPesanLokasi(null);
+    const koordinat = await ambilKoordinatSaatIni();
+    pilihKota({
+      id: -1,
+      name: "Lokasi Saat Ini",
+      latitude: koordinat.latitude,
+      longitude: koordinat.longitude,
+      country: "",
+    });
+  }
+
+  const sudahFavorit = kotaTerpilih
+    ? idFavorit.includes(kotaTerpilih.id)
+    : false;
+
   return (
     <SafeAreaView style={{ flex: 1, padding: 16, gap: 16 }}>
       <SearchBox onCari={setTeksCari} />
@@ -78,6 +127,8 @@ export default function HalamanUtama() {
           <Text>{kota.name}</Text>
         </TouchableOpacity>
       ))}
+      <Button title="Gunakan Lokasi Saat Ini" onPress={gunakanLokasiSaatIni} />
+      {pesanLokasi && <Text>{pesanLokasi}</Text>}
       {sedangMemuat && <ActivityIndicator />}
       {pesanError && (
         <View>
@@ -88,16 +139,37 @@ export default function HalamanUtama() {
           />
         </View>
       )}
+
       {cuaca && kualitasUdara && kotaTerpilih && !sedangMemuat && (
-        <WeatherCard
-          kota={kotaTerpilih.name}
-          suhu={cuaca.saatIni.suhu}
-          tingkatAQI={konversiTingkatAQI(kualitasUdara.indeksAQI)}
-          indeksAQI={kualitasUdara.indeksAQI}
-        />
+        <>
+          <WeatherCard
+            kota={kotaTerpilih.name}
+            suhu={cuaca.saatIni.suhu}
+            tingkatAQI={konversiTingkatAQI(kualitasUdara.indeksAQI)}
+            indeksAQI={kualitasUdara.indeksAQI}
+          />
+
+          {/* Latihan mandiri poin 3: sembunyikan tombol jika sudah favorit */}
+          {!sudahFavorit && (
+            <Button
+              title="Tambahkan ke Favorit"
+              onPress={() =>
+                router.push({
+                  pathname: "/tambah-favorit",
+                  params: {
+                    id: String(kotaTerpilih.id),
+                    nama: kotaTerpilih.name,
+                    lat: String(kotaTerpilih.latitude),
+                    lon: String(kotaTerpilih.longitude),
+                  },
+                })
+              }
+            />
+          )}
+          {sudahFavorit && <Text>✓ Sudah ada di favorit</Text>}
+        </>
       )}
 
-      {/* Latihan mandiri poin 1: suhu maksimal/minimal harian */}
       {cuaca && (
         <Text style={{ fontSize: 14 }}>
           Hari ini: {cuaca.harian.suhuMaksimal[0]}°C /{" "}
@@ -112,7 +184,6 @@ export default function HalamanUtama() {
         </Text>
       )}
 
-      {/* Latihan mandiri poin 2: PM2.5 dan PM10, dekat AtribusiCuaca */}
       {kualitasUdara && (
         <Text style={{ fontSize: 11, color: "#888", textAlign: "center" }}>
           PM2.5: {kualitasUdara.pm25} µg/m³ • PM10: {kualitasUdara.pm10} µg/m³
