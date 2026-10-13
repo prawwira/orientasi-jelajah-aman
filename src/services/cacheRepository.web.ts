@@ -103,3 +103,10 @@ export async function hapusSemuaCache(): Promise<void> {
   if (typeof localStorage === "undefined") return;
   localStorage.removeItem(KUNCI_STORAGE);
 }
+
+// Hapus satu kota dari cache berdasarkan kuncinya
+export async function hapusCache(kunci: string): Promise<void> {
+  const peta = bacaSemua();
+  delete peta[kunci];
+  tulisSemua(peta);
+}

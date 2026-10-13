@@ -24,6 +24,7 @@ import { useDebounce } from "../../hooks/use-debounce";
 import {
   bersihkanCacheLama,
   daftarKotaTersimpan,
+  hapusSemuaCache,
 } from "../../services/cacheRepository";
 import {
   ambilCuacaOfflineFirst,
@@ -52,6 +53,11 @@ export default function HalamanUtama() {
 
   async function muatKotaTersimpan() {
     setKotaTersimpan(await daftarKotaTersimpan());
+  }
+
+  async function hapusSemuaTersimpan() {
+    await hapusSemuaCache();
+    muatKotaTersimpan(); // muat ulang, daftar jadi kosong
   }
 
   // Saat aplikasi dibuka: buang cache > 7 hari, lalu tampilkan daftar tersimpan
@@ -151,30 +157,6 @@ export default function HalamanUtama() {
           </TouchableOpacity>
         ))}
 
-        {kotaTersimpan.length > 0 && (
-          <View style={{ gap: 6 }}>
-            <Text style={{ fontWeight: "bold" }}>
-              Tersimpan di perangkat (bisa dibuka offline)
-            </Text>
-            {kotaTersimpan.map((k) => (
-              <TouchableOpacity
-                key={k.kunci}
-                onPress={() =>
-                  pilihKota({
-                    id: k.id,
-                    name: k.nama,
-                    latitude: k.latitude,
-                    longitude: k.longitude,
-                    country: "",
-                  })
-                }
-              >
-                <Text>{k.nama}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-
         {sedangMemuat && <ActivityIndicator />}
 
         {pesanError && (
@@ -221,6 +203,49 @@ export default function HalamanUtama() {
               }
             />
           </>
+        )}
+
+        {kotaTersimpan.length > 0 && (
+          <View style={{ gap: 6 }}>
+            <Text style={{ fontWeight: "bold" }}>
+              Tersimpan di perangkat (bisa dibuka offline)
+            </Text>
+
+            {kotaTersimpan.map((k) => (
+              <TouchableOpacity
+                key={k.kunci}
+                onPress={() =>
+                  pilihKota({
+                    id: k.id,
+                    name: k.nama,
+                    latitude: k.latitude,
+                    longitude: k.longitude,
+                    country: "",
+                  })
+                }
+              >
+                <Text>{k.nama}</Text>
+              </TouchableOpacity>
+            ))}
+
+            <TouchableOpacity
+              onPress={hapusSemuaTersimpan}
+              accessibilityRole="button"
+              accessibilityLabel="Hapus semua data cuaca tersimpan"
+              style={{
+                alignSelf: "flex-start",
+                backgroundColor: "#DC2626",
+                paddingVertical: 4,
+                paddingHorizontal: 10,
+                borderRadius: 6,
+                marginTop: 4,
+              }}
+            >
+              <Text style={{ color: "white", fontSize: 12, fontWeight: "600" }}>
+                Hapus Semua
+              </Text>
+            </TouchableOpacity>
+          </View>
         )}
 
         <AtribusiCuaca />
