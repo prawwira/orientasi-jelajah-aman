@@ -1,5 +1,5 @@
 // src/app/(tabs)/index.tsx
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router"; // BARU: useLocalSearchParams
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -35,9 +35,13 @@ import {
   ambilKoordinatSaatIni,
   mintaIzinLokasi,
 } from "../../services/locationService";
+import { tambahRiwayatPencarian } from "../../services/riwayatPencarianStorage"; // BARU
 import { konversiTingkatAQI } from "../../services/weatherAdapter";
 
 export default function HalamanUtama() {
+  // BARU: parameter dari tab Riwayat (nama kota + penanda waktu)
+  const { cari, t } = useLocalSearchParams<{ cari?: string; t?: string }>();
+
   const [teksCari, setTeksCari] = useState("");
   const [hasilPencarian, setHasilPencarian] = useState<HasilGeocoding[]>([]);
   const [kotaTerpilih, setKotaTerpilih] = useState<HasilGeocoding | null>(null);
@@ -77,6 +81,47 @@ export default function HalamanUtama() {
       .catch(() => setHasilPencarian([]));
   }, [teksTertunda]);
 
+  // BARU: dibuka dari tab Riwayat -> isi kotak pencarian dan cari kota itu otomatis
+  useEffect(() => {
+    if (!cari) return;
+    setTeksCari(cari);
+    bukaKotaDariNama(cari);
+  }, [cari, t]);
+
+  // BARU
+  async function bukaKotaDariNama(nama: string) {
+    try {
+      const hasilCari = await cariKota(nama);
+      if (hasilCari.length > 0) {
+        pilihKota(hasilCari[0]);
+        return;
+      }
+    } catch {
+      // gagal (misalnya offline): coba cari di cache di bawah
+    }
+
+    try {
+      const tersimpan = await daftarKotaTersimpan();
+      const cocok = tersimpan.find(
+        (k) => k.nama.toLowerCase() === nama.toLowerCase(),
+      );
+      if (cocok) {
+        pilihKota({
+          id: cocok.id,
+          name: cocok.nama,
+          latitude: cocok.latitude,
+          longitude: cocok.longitude,
+          country: "",
+        });
+        return;
+      }
+    } catch {
+      // abaikan
+    }
+
+    setPesanError("Kota tidak ditemukan atau tidak ada koneksi internet.");
+  }
+
   async function pilihKota(kota: HasilGeocoding, paksaPerbarui = false) {
     setKotaTerpilih(kota);
     const idSaatIni = ++requestIdRef.current;
@@ -98,6 +143,11 @@ export default function HalamanUtama() {
 
       setHasil(data);
       muatKotaTersimpan();
+
+      // BARU: catat ke riwayat pencarian (lewati "Lokasi Saat Ini")
+      if (kota.id !== -1) {
+        tambahRiwayatPencarian(kota.name).catch(() => {});
+      }
     } catch (err) {
       if (idSaatIni !== requestIdRef.current) return;
       setHasil(null);
@@ -142,7 +192,8 @@ export default function HalamanUtama() {
         contentContainerStyle={{ padding: 16, gap: 16 }}
         keyboardShouldPersistTaps="handled"
       >
-        <SearchBox onCari={setTeksCari} />
+        {/* BARU: prop nilai supaya kotak terisi saat dibuka dari Riwayat */}
+        <SearchBox onCari={setTeksCari} nilai={teksCari} />
         <Button
           title="Gunakan Lokasi Saat Ini"
           onPress={gunakanLokasiSaatIni}

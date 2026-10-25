@@ -3,11 +3,14 @@ import { useState } from "react";
 import { TextInput, View } from "react-native";
 interface SearchBoxProps {
   onCari: (teks: string) => void;
+  nilai?: string; // BARU: opsional, untuk mengisi kotak dari luar
 }
-export default function SearchBox({ onCari }: SearchBoxProps) {
-  const [teks, setTeks] = useState("");
+export default function SearchBox({ onCari, nilai }: SearchBoxProps) {
+  const [teksLokal, setTeksLokal] = useState("");
+  const teks = nilai ?? teksLokal; // BARU: pakai nilai dari luar kalau ada
+
   function handleChange(nilaiBaru: string) {
-    setTeks(nilaiBaru);
+    setTeksLokal(nilaiBaru);
     onCari(nilaiBaru); // kirim setiap perubahan, debounce diatur di pemanggilnya
   }
   return (

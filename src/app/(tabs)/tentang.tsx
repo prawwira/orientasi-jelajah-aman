@@ -1,31 +1,34 @@
-// app/(tabs)/tentang.tsx
-import { Text } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { ScrollView } from "react-native";
+import { Layar, Teks } from "../../components/tema-ui";
 import { spacing, typeScale } from "../../constants/styles";
+import { useTema } from "../../context/TemaContext";
 
 export default function TabTentang() {
-  return (
-    <SafeAreaView style={{ flex: 1, padding: spacing.sedang }}>
-      <Text
-        accessibilityLabel="Judul halaman Tentang Aplikasi"
-        style={{
-          fontSize: typeScale.judul,
-          fontWeight: "bold",
-          marginBottom: spacing.kecil,
-        }}
-      >
-        Tentang Aplikasi
-      </Text>
+  const { warna } = useTema();
 
-      <Text style={{ fontSize: typeScale.subjudul, marginBottom: spacing.kecil }}>
-        Jelajah Aman
-      </Text>
-      <Text style={{ fontSize: typeScale.isi, marginBottom: spacing.kecil }}>
-        Versi 1.0.0
-      </Text>
-      <Text style={{ fontSize: typeScale.isi }}>
-        Dibuat oleh: [Nama Kamu]
-      </Text>
-    </SafeAreaView>
+  return (
+    <Layar>
+      <ScrollView
+        contentContainerStyle={{ padding: spacing.sedang, gap: spacing.kecil }}
+      >
+        <Teks
+          accessibilityRole="header"
+          accessibilityLabel="Judul halaman Tentang Aplikasi"
+          style={{ fontSize: typeScale.judul, fontWeight: "bold" }}
+        >
+          Tentang Aplikasi
+        </Teks>
+        <Teks style={{ fontSize: typeScale.subjudul }}>Jelajah Aman</Teks>
+        <Teks style={{ fontSize: typeScale.isi }}>Versi 1.0.0</Teks>
+        <Teks style={{ fontSize: typeScale.isi }}>
+          Dibuat oleh: Imam Prawira
+        </Teks>
+        <Teks
+          style={{ fontSize: typeScale.keterangan, color: warna.teksSekunder }}
+        >
+          Data cuaca dan kualitas udara oleh Open-Meteo.com
+        </Teks>
+      </ScrollView>
+    </Layar>
   );
 }
