@@ -1,15 +1,13 @@
 // src/app/(tabs)/index.tsx
-import { router, useLocalSearchParams } from "expo-router"; // BARU: useLocalSearchParams
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Button,
   ScrollView,
-  Text,
   TouchableOpacity,
   View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+} from "react-native"; // TEMA: Text dan SafeAreaView dihapus
 import {
   HasilCuacaOffline,
   RingkasanKotaTersimpan,
@@ -18,8 +16,10 @@ import { HasilGeocoding } from "../../../types/geocoding";
 import AtribusiCuaca from "../../components/AtribusiCuaca";
 import SearchBox from "../../components/SearchBox";
 import StatusData from "../../components/StatusData";
+import { Layar, Teks } from "../../components/tema-ui"; // TEMA
 import WeatherCard from "../../components/WeatherCard";
 import { labelKodeCuaca } from "../../constants/weatherCodes";
+import { useTema } from "../../context/TemaContext";
 import { useDebounce } from "../../hooks/use-debounce";
 import {
   bersihkanCacheLama,
@@ -35,12 +35,14 @@ import {
   ambilKoordinatSaatIni,
   mintaIzinLokasi,
 } from "../../services/locationService";
-import { tambahRiwayatPencarian } from "../../services/riwayatPencarianStorage"; // BARU
+import { tambahRiwayatPencarian } from "../../services/riwayatPencarianStorage";
 import { konversiTingkatAQI } from "../../services/weatherAdapter";
 
 export default function HalamanUtama() {
-  // BARU: parameter dari tab Riwayat (nama kota + penanda waktu)
+  // Parameter dari tab Riwayat (nama kota + penanda waktu)
   const { cari, t } = useLocalSearchParams<{ cari?: string; t?: string }>();
+
+  const { warna } = useTema();
 
   const [teksCari, setTeksCari] = useState("");
   const [hasilPencarian, setHasilPencarian] = useState<HasilGeocoding[]>([]);
@@ -81,14 +83,13 @@ export default function HalamanUtama() {
       .catch(() => setHasilPencarian([]));
   }, [teksTertunda]);
 
-  // BARU: dibuka dari tab Riwayat -> isi kotak pencarian dan cari kota itu otomatis
+  // Dibuka dari tab Riwayat -> isi kotak pencarian dan cari kota itu otomatis
   useEffect(() => {
     if (!cari) return;
     setTeksCari(cari);
     bukaKotaDariNama(cari);
   }, [cari, t]);
 
-  // BARU
   async function bukaKotaDariNama(nama: string) {
     try {
       const hasilCari = await cariKota(nama);
@@ -144,7 +145,7 @@ export default function HalamanUtama() {
       setHasil(data);
       muatKotaTersimpan();
 
-      // BARU: catat ke riwayat pencarian (lewati "Lokasi Saat Ini")
+      // catat ke riwayat pencarian (lewati "Lokasi Saat Ini")
       if (kota.id !== -1) {
         tambahRiwayatPencarian(kota.name).catch(() => {});
       }
@@ -187,32 +188,42 @@ export default function HalamanUtama() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    // TEMA: Layar memberi warna latar sesuai mode terang/gelap
+    <Layar>
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 16 }}
         keyboardShouldPersistTaps="handled"
       >
-        {/* BARU: prop nilai supaya kotak terisi saat dibuka dari Riwayat */}
         <SearchBox onCari={setTeksCari} nilai={teksCari} />
         <Button
           title="Gunakan Lokasi Saat Ini"
           onPress={gunakanLokasiSaatIni}
         />
         {pesanLokasi && (
-          <Text accessibilityLabel={pesanLokasi}>{pesanLokasi}</Text>
+          <Teks accessibilityLabel={pesanLokasi}>{pesanLokasi}</Teks>
         )}
 
+        {/* TEMA: hasil pencarian tampil sebagai kartu */}
         {hasilPencarian.map((kota) => (
-          <TouchableOpacity key={kota.id} onPress={() => pilihKota(kota)}>
-            <Text>{kota.name}</Text>
+          <TouchableOpacity
+            key={kota.id}
+            onPress={() => pilihKota(kota)}
+            style={{
+              paddingVertical: 10,
+              paddingHorizontal: 12,
+              borderRadius: 8,
+              backgroundColor: warna.kartu,
+            }}
+          >
+            <Teks>{kota.name}</Teks>
           </TouchableOpacity>
         ))}
 
-        {sedangMemuat && <ActivityIndicator />}
+        {sedangMemuat && <ActivityIndicator color={warna.aksen} />}
 
         {pesanError && (
-          <View>
-            <Text accessibilityLabel={pesanError}>{pesanError}</Text>
+          <View style={{ gap: 8 }}>
+            <Teks accessibilityLabel={pesanError}>{pesanError}</Teks>
             <Button
               title="Coba Lagi"
               onPress={() => kotaTerpilih && pilihKota(kotaTerpilih, true)}
@@ -231,10 +242,10 @@ export default function HalamanUtama() {
               suhu={hasil.cuaca.saatIni.suhu}
               tingkatAQI={konversiTingkatAQI(hasil.kualitasUdara.indeksAQI)}
             />
-            <Text style={{ fontSize: 12, color: "#888888" }}>
+            <Teks style={{ fontSize: 12, color: warna.teksSekunder }}>
               Kondisi: {labelKodeCuaca(hasil.cuaca.saatIni.kodeCuaca)}{" "}
               {"\u2022"} Angin {hasil.cuaca.saatIni.kecepatanAngin} km/j
-            </Text>
+            </Teks>
             <Button
               title="Perbarui Sekarang"
               onPress={() => pilihKota(kotaTerpilih, true)}
@@ -256,11 +267,19 @@ export default function HalamanUtama() {
           </>
         )}
 
+        {/* TEMA: daftar tersimpan tampil sebagai kartu */}
         {kotaTersimpan.length > 0 && (
-          <View style={{ gap: 6 }}>
-            <Text style={{ fontWeight: "bold" }}>
+          <View
+            style={{
+              gap: 6,
+              padding: 12,
+              borderRadius: 8,
+              backgroundColor: warna.kartu,
+            }}
+          >
+            <Teks style={{ fontWeight: "bold" }}>
               Tersimpan di perangkat (bisa dibuka offline)
-            </Text>
+            </Teks>
 
             {kotaTersimpan.map((k) => (
               <TouchableOpacity
@@ -275,7 +294,7 @@ export default function HalamanUtama() {
                   })
                 }
               >
-                <Text>{k.nama}</Text>
+                <Teks>{k.nama}</Teks>
               </TouchableOpacity>
             ))}
 
@@ -285,22 +304,22 @@ export default function HalamanUtama() {
               accessibilityLabel="Hapus semua data cuaca tersimpan"
               style={{
                 alignSelf: "flex-start",
-                backgroundColor: "#DC2626",
+                backgroundColor: warna.bahaya,
                 paddingVertical: 4,
                 paddingHorizontal: 10,
                 borderRadius: 6,
                 marginTop: 4,
               }}
             >
-              <Text style={{ color: "white", fontSize: 12, fontWeight: "600" }}>
+              <Teks style={{ color: "white", fontSize: 12, fontWeight: "600" }}>
                 Hapus Semua
-              </Text>
+              </Teks>
             </TouchableOpacity>
           </View>
         )}
 
         <AtribusiCuaca />
       </ScrollView>
-    </SafeAreaView>
+    </Layar>
   );
 }

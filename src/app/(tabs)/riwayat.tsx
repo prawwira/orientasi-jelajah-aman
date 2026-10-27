@@ -6,12 +6,12 @@ import {
   Button,
   Platform,
   ScrollView,
-  Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { KotaFavorit } from "../../../types/favorit";
+import { Layar, Teks } from "../../components/tema-ui";
+import { useTema } from "../../context/TemaContext";
 import { ambilSemuaFavorit, hapusFavorit } from "../../services/favoritStorage";
 import {
   ambilRiwayatPencarian,
@@ -20,6 +20,7 @@ import {
 } from "../../services/riwayatPencarianStorage";
 
 export default function TabRiwayat() {
+  const { warna } = useTema();
   const [daftarFavorit, setDaftarFavorit] = useState<KotaFavorit[]>([]);
   const [riwayat, setRiwayat] = useState<string[]>([]);
 
@@ -64,7 +65,7 @@ export default function TabRiwayat() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <Layar>
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
         {/* Bagian 1: riwayat pencarian terakhir */}
         <View
@@ -74,23 +75,23 @@ export default function TabRiwayat() {
             alignItems: "center",
           }}
         >
-          <Text style={{ fontSize: 18, fontWeight: "bold" }}>
+          <Teks style={{ fontSize: 18, fontWeight: "bold" }}>
             Pencarian Terakhir ({riwayat.length}/{MAKS_RIWAYAT})
-          </Text>
+          </Teks>
           {riwayat.length > 0 && (
             <TouchableOpacity
               onPress={hapusRiwayat}
               accessibilityRole="button"
               accessibilityLabel="Hapus semua riwayat pencarian"
             >
-              <Text style={{ color: "#DC2626", fontSize: 12 }}>
+              <Teks style={{ color: warna.bahaya, fontSize: 12 }}>
                 Hapus Riwayat
-              </Text>
+              </Teks>
             </TouchableOpacity>
           )}
         </View>
 
-        {riwayat.length === 0 && <Text>Belum ada riwayat pencarian</Text>}
+        {riwayat.length === 0 && <Teks>Belum ada riwayat pencarian</Teks>}
 
         {riwayat.map((nama) => (
           <TouchableOpacity
@@ -101,20 +102,20 @@ export default function TabRiwayat() {
             style={{
               paddingVertical: 10,
               borderBottomWidth: 1,
-              borderBottomColor: "#E5E7EB",
+              borderBottomColor: warna.garis,
             }}
           >
-            <Text>{nama}</Text>
+            <Teks>{nama}</Teks>
           </TouchableOpacity>
         ))}
 
-        {/* Bagian 2: favorit (kode asli) */}
-        <Text style={{ fontSize: 18, fontWeight: "bold", marginTop: 12 }}>
+        {/* Bagian 2: favorit */}
+        <Teks style={{ fontSize: 18, fontWeight: "bold", marginTop: 12 }}>
           Kota Favorit
-        </Text>
-        <Text>Tersimpan {daftarFavorit.length} kota</Text>
+        </Teks>
+        <Teks>Tersimpan {daftarFavorit.length} kota</Teks>
 
-        {daftarFavorit.length === 0 && <Text>Belum ada kota favorit</Text>}
+        {daftarFavorit.length === 0 && <Teks>Belum ada kota favorit</Teks>}
 
         {daftarFavorit.map((kota) => (
           <View
@@ -125,11 +126,11 @@ export default function TabRiwayat() {
               alignItems: "center",
             }}
           >
-            <Text>{kota.nama}</Text>
+            <Teks>{kota.nama}</Teks>
             <Button title="Hapus" onPress={() => konfirmasiHapus(kota)} />
           </View>
         ))}
       </ScrollView>
-    </SafeAreaView>
+    </Layar>
   );
 }
